@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Uptime Monitor</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 30px;
+            background: #f4f6f8;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        #dashboard {
+            display: grid;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .url {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+
+        .up {
+            color: green;
+        }
+
+        .down {
+            color: red;
+        }
+
+        .unknown {
+            color: gray;
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            background: #f1f3f5;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .chart-container {
+            margin-top: 25px;
+            height: 300px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <h1>🌐 Uptime Monitor</h1>
+
+    <div id="dashboard">
+        Loading...
+    </div>
+
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+    <script>
+
+        async function loadDashboard() {
+
+            const response = await fetch("/urls");
+
+            const data = await response.json();
+
+            const dashboard =
+                document.getElementById("dashboard");
+
+            dashboard.innerHTML = "";
+
+
+            for (const item of data.urls) {
+
+                // Get statistics
+                const statsResponse =
+                    await fetch(
+                        `/urls/${item.id}/stats`
+                    );
+
+                const stats =
+                    await statsResponse.json();
+
+
+                // Get history
+                const historyResponse =
+                    await fetch(
+                        `/urls/${item.id}/history`
+                    );
+
+                const historyData =
+                    await historyResponse.json();
+
+
+                // Create card
+                const card =
+                    document.createElement("div");
+
+                card.className = "card";
+
+
+                // Current status
+                const status =
+                    stats.current_status;
+
+
+                let statusClass = "unknown";
+
+                if (status === "UP") {
+                    statusClass = "up";
+                }
+                else if (status === "DOWN") {
+                    statusClass = "down";
+                }
+
+
+                // Card HTML
+                card.innerHTML = `
+
+                    <div class="url">
+                        ${stats.url}
+                    </div>
+
+                    <div class="status ${statusClass}">
+                        ● ${status}
+                    </div>
+
+
+                    <div class="stats">
+
+                        <div class="stat">
+                            Uptime:
+                            ${stats.uptime_percentage}%
+                        </div>
+
+                        <div class="stat">
+                            Average response:
+                            ${stats.average_response_time_ms ?? "N/A"} ms
+                        </div>
+
+                        <div class="stat">
+                            Checks:
+                            ${stats.total_checks}
+                        </div>
+
+                    </div>
+
+
+                    <div class="chart-container">
+                        <canvas id="chart-${item.id}"></canvas>
+                    </div>
+
+                `;
+
+
+                dashboard.appendChild(card);
+
+
+                // History data
+                const history =
+                    historyData.history;
+
+
+                // Reverse history so that
+                // oldest check comes first
+                const orderedHistory =
+                    [...history].reverse();
+
+
+                const labels =
+                    orderedHistory.map(check => {
+
+                        const date =
+                            new Date(check.checked_at);
+
+                        return date.toLocaleTimeString();
+
+                    });
+
+
+                const responseTimes =
+                    orderedHistory.map(check => {
+
+                        return check.response_time_ms;
+
+                    });
+
+
+                // Create chart
+                const canvas =
+                    document.getElementById(
+                        `chart-${item.id}`
+                    );
+
+
+                new Chart(canvas, {
+
+                    type: "line",
+
+                    data: {
+
+                        labels: labels,
+
+                        datasets: [{
+
+                            label: "Response Time (ms)",
+
+                            data: responseTimes,
+
+                            tension: 0.3
+
+                        }]
+
+                    },
+
+                    options: {
+
+                        responsive: true,
+
+                        maintainAspectRatio: false,
+
+                        scales: {
+
+                            y: {
+
+                                beginAtZero: true,
+
+                                title: {
+
+                                    display: true,
+
+                                    text: "Milliseconds"
+
+                                }
+
+                            },
+
+                            x: {
+
+                                title: {
+
+                                    display: true,
+
+                                    text: "Time"
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                });
+
+            }
+        }
+
+
+        // Load dashboard
+        loadDashboard();
+
+
+        // Refresh dashboard every 60 seconds
+        setInterval(() => {
+
+            location.reload();
+
+        }, 60000);
+
+    </script>
+
+</body>
+
+</html>
