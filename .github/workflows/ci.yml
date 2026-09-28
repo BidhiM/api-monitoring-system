@@ -1,7 +1,5 @@
 name: Uptime Monitor CI
-permissions:
-  id-token: write
-  contents: read
+
 on:
   push:
     branches:
@@ -10,7 +8,6 @@ on:
   pull_request:
     branches:
       - main
-
 
 jobs:
 
@@ -22,28 +19,19 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Debug GitHub OIDC
-        uses: github/actions-oidc-debugger@main
-
-      - name: Test AWS access
-        run: |
-          aws sts get-caller-identity
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
 
-
       - name: Run tests
         run: |
           python -m pytest
-      
 
       - name: Build Docker image
         run: |
@@ -55,16 +43,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-
       - name: Tag Docker image
         run: |
           docker tag uptime-monitor \
             ${{ secrets.DOCKERHUB_USERNAME }}/uptime-monitor:latest
-
 
       - name: Push Docker image
         run: |
           docker push \
             ${{ secrets.DOCKERHUB_USERNAME }}/uptime-monitor:latest
 
-     
