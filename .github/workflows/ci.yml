@@ -59,3 +59,31 @@ jobs:
         run: |
           docker push \
             ${{ secrets.DOCKERHUB_USERNAME }}/uptime-monitor:latest
+      
+      - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          echo "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/deploy_key "$EC2_USERNAME@$EC2_HOST" << EOF
+            sudo docker pull $DOCKERHUB_USERNAME/uptime-monitor:latest
+
+            sudo docker stop uptime-app || true
+            sudo docker rm uptime-app || true
+
+            sudo docker run -d \
+              --name uptime-app \
+              -p 5000:5000 \
+              -v /home/ubuntu/uptime-data:/app/instance \
+              $DOCKERHUB_USERNAME/uptime-monitor:latest
+          EOF
