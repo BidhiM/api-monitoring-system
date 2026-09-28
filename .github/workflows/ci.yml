@@ -1,5 +1,7 @@
 name: Uptime Monitor CI
-
+permissions:
+  id-token: write
+  contents: read
 on:
   push:
     branches:
@@ -20,7 +22,16 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::449386169608:role/GitHubActions-UptimeMonitor
+          aws-region: ap-south-1
 
+      - name: Test AWS access
+        run: |
+          aws sts get-caller-identity
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -60,39 +71,4 @@ jobs:
           docker push \
             ${{ secrets.DOCKERHUB_USERNAME }}/uptime-monitor:latest
 
-      - name: Deploy to EC2
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
-          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: |
-          mkdir -p "$HOME/.ssh"
-          chmod 700 "$HOME/.ssh"
-
-          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
-          chmod 600 "$HOME/.ssh/deploy_key"
-
-          echo "Checking EC2 SSH connectivity..."
-
-          if ! ssh-keyscan -T 10 -H "$EC2_HOST" >> "$HOME/.ssh/known_hosts"; then
-              echo "ERROR: Could not retrieve EC2 SSH host key."
-              echo "Check EC2_HOST and the EC2 security group's SSH rule."
-          exit 1
-          fi
-
-          ssh -i "$HOME/.ssh/deploy_key" \
-            "$EC2_USERNAME@$EC2_HOST" << EOF
-
-            sudo docker pull $DOCKERHUB_USERNAME/uptime-monitor:latest
-
-            sudo docker stop uptime-app || true
-            sudo docker rm uptime-app || true
-
-            sudo docker run -d \
-              --name uptime-app \
-              -p 5000:5000 \
-              -v /home/ubuntu/uptime-data:/app/instance \
-              $DOCKERHUB_USERNAME/uptime-monitor:latest
-
-          EOF
+     
