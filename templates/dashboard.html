@@ -8,7 +8,19 @@
           content="width=device-width, initial-scale=1.0">
 
     <title>Uptime Monitor</title>
+    <div>
+    <input
+        type="text"
+        id="urlInput"
+        placeholder="https://example.com"
+    >
 
+    <button onclick="addURL()">
+        Add URL
+    </button>
+
+    <p id="message"></p>
+    </div>
     <style>
 
         body {
@@ -91,7 +103,47 @@
 
 
     <script>
+        async function addURL() {
 
+ 	    const urlInput = document.getElementById("urlInput");
+	    const message = document.getElementById("message");
+
+	    const url = urlInput.value.trim();
+
+	    if (!url) {
+	        message.textContent = "Please enter a URL.";
+	        return;
+	    }
+
+	    try {
+
+	      	const response = await fetch("/urls", {
+        		method: "POST",
+            		headers: {
+                		"Content-Type": "application/json"
+            		},
+            		body: JSON.stringify({
+                		url: url
+            		})
+        	});
+
+        	const data = await response.json();
+
+        	if (response.ok) {
+            		message.textContent = "URL added successfully!";
+            		urlInput.value = "";
+
+            		loadDashboard();
+        	} else {
+            		message.textContent = data.error || "Failed to add URL.";
+        	}
+
+    	    } catch (error) {
+
+        	message.textContent = "Error adding URL.";
+        	console.error(error);
+    	    }
+	}
         async function loadDashboard() {
 
             const response = await fetch("/urls");
