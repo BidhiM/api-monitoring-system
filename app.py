@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from urllib.parse import urlparse
 import requests
 import time
-from datetime import datetime
+from datetime import datetime,timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from models import db, MonitoredURL, URLCheck
 
@@ -35,6 +35,12 @@ def check_all_urls():
 with app.app_context():
     db.create_all()
 
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "healthy"
+    }), 200
+
 @app.route("/dashboard")
 def dashboard():
     return render_template("dashboard.html")
@@ -61,7 +67,7 @@ def check_one_url(monitored_url):
             status="UP",
             status_code=response.status_code,
             response_time_ms=response_time,
-            checked_at=datetime.utcnow()
+            checked_at=datetime.now(timezone.utc)
         )
 
         db.session.add(check)
@@ -80,7 +86,7 @@ def check_one_url(monitored_url):
             status="DOWN",
             status_code=None,
             response_time_ms=None,
-            checked_at=datetime.utcnow()
+            checked_at=datetime.now(timezone.utc)
         )
 
         db.session.add(check)

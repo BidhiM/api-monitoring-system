@@ -1,0 +1,13 @@
+services:
+
+  uptime-monitor:
+
+    build: .
+
+    container_name: uptime-app
+
+    ports:
+      - "5000:5000"
+
+    volumes:
+      - ./instance:/app/instance
