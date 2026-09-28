@@ -26,7 +26,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::449386169608:role/GitHubActions-UptimeMonitor
+          role-to-assume: arn:aws:iam::449386169608:role/GithubActions-UptimeMonitor
           aws-region: ap-south-1
 
       - name: Test AWS access
