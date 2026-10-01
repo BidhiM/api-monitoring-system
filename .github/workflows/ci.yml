@@ -8,6 +8,10 @@ on:
   pull_request:
     branches:
       - main
+      
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
 
@@ -19,6 +23,16 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Test AWS access
+        run: |
+          aws sts get-caller-identity
 
       - name: Set up Python
         uses: actions/setup-python@v5
